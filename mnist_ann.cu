@@ -64,9 +64,38 @@ void softmaxKernel(double *source, int size) {
 }
 
 __global__
-void normalizeKernel(double* source) {
+void softmaxPrimeKernel(double *source, double *gradient, int size) {
+//    int idx = blockIdx.x;
+//    if (idx % size == 0) {
+//        double sum = 0.0;
+//        for (int i=0; i < size; i++) {
+//
+//            sum += exp(source[idx+i]);
+//        }
+//    }
+}
+
+__global__
+void onehotKernel(int *source, double *dest, int numFeatures) {
     int idx = blockIdx.x;
-    source[idx] = source[idx] / 255;
+    for (int i=0; i<numFeatures; i++) {
+        dest[numFeatures*idx + i] = (source[idx] == i) ? 1 : 0;
+    }
+}
+
+__global__
+void divideKernel(double* source, double divideBy) {
+    int idx = blockIdx.x;
+    source[idx] = source[idx] / divideBy;
+}
+
+__global__
+void crossEntropy(double* p, double* q, double* loss, int numFeatures) {
+    int idx = blockIdx.x;
+    loss[idx] = 0;
+    for (int i = 0; i < numFeatures; i++) {
+        loss[idx] -= p[numFeatures*idx + i] * log(q[numFeatures*idx + i]);
+    }
 }
 
 __global__
@@ -200,7 +229,7 @@ int main() {
     cudaMemcpy(d_train_vec, train_vec, number_of_images * number_of_pixels * sizeof(double), cudaMemcpyHostToDevice);
 
 
-    normalizeKernel<<<number_of_images*number_of_pixels, 1>>> (d_train_vec);
+    divideKernel<<<number_of_images*number_of_pixels, 1>>> (d_train_vec, 255);
     cudaMemcpy(train_vec, d_train_vec, number_of_images * number_of_pixels * sizeof(double), cudaMemcpyDeviceToHost);
 
     cudaFree(d_train_vec);
@@ -219,8 +248,9 @@ int main() {
     double* h_result = new double[BATCH_SIZE * number_of_pixels];
     memcpy(h_result, train_vec, BATCH_SIZE * number_of_pixels * sizeof(double));
 
+    double* d_result;
     for (int i = 0; i < num_weight_matrices; i++) {
-        double* d_batch, *d_bias, *d_weight, *d_result;
+        double* d_batch, *d_bias, *d_weight;
 
         cudaMalloc((void**)&d_batch, BATCH_SIZE * number_of_pixels * sizeof(double));
         cudaMalloc((void**)&d_weight, weight_params[i][0] * weight_params[i][1] * sizeof(double));
@@ -249,19 +279,11 @@ int main() {
         cout << cudaGetErrorString(cudaGetLastError()) << endl;
 
         cudaMemcpy(h_result, d_result, BATCH_SIZE * weight_params[i][1] * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaDeviceSynchronize();
-
-//        cout << weight_params[i][0] << " : " << weight_params[i][1] << endl;
-//
-//        for (int j=0; j < BATCH_SIZE * weight_params[i][1]; j++) {
-//            cout << h_result[j] << " ";
-//        }
-//        cout << endl;
 
         cudaFree(d_batch);
 //    cudaFree(d_bias);
         cudaFree(d_weight);
-        cudaFree(d_result);
+
     }
 
     for (int j=0; j < BATCH_SIZE * weight_params[num_weight_matrices-1][1]; j++) {
@@ -272,14 +294,65 @@ int main() {
     }
     cout << endl;
 
-    for (int j=0; j < BATCH_SIZE; j++) {
-        cout << train_vec_labels[j] << " ";
+//    for (int j=0; j < BATCH_SIZE; j++) {
+//        cout << train_vec_labels[j] << " ";
+//    }
+//    cout << endl;
+
+    double* h_onehotLabels, *d_onehotLabels;
+    int* d_labels;
+
+    h_onehotLabels = new double[BATCH_SIZE * 10];
+    cudaMalloc((void**) &d_onehotLabels, BATCH_SIZE * 10 * sizeof(double));
+    cudaMalloc((void**) &d_labels, BATCH_SIZE * sizeof(double));
+    cudaMemcpy(d_labels, train_vec_labels, BATCH_SIZE * sizeof(int), cudaMemcpyHostToDevice);
+    onehotKernel<<<BATCH_SIZE, 1>>>(d_labels, d_onehotLabels, 10);
+
+    cudaMemcpy(h_onehotLabels, d_onehotLabels, BATCH_SIZE * 10 * sizeof(double), cudaMemcpyDeviceToHost);
+
+    
+
+    for (int i=0; i < BATCH_SIZE * 10; i++) {
+        if (i % 10 == 0) {
+            cout << endl;
+        }
+        cout << h_onehotLabels[i] << " ";
     }
+
+    cout << endl;
+
+    for (int i=0; i < BATCH_SIZE * 10; i++) {
+        if (i % 10 == 0) {
+            cout << endl;
+        }
+        cout << h_result[i] << " ";
+    }
+
     cout << endl;
 
 
+    double * h_losses, *d_losses;
+
+    h_losses = new double[BATCH_SIZE];
+    cudaMalloc((void**) &d_losses, BATCH_SIZE * sizeof(double));
+    crossEntropy<<<BATCH_SIZE, 1>>>(d_onehotLabels, d_result, d_losses, 10);
+
+    cudaMemcpy(h_losses, d_losses, 10 * sizeof(double), cudaMemcpyDeviceToHost);
+
+    double loss = 0.0;
+    for (int i = 0; i < 10; i++) {
+        loss += h_losses[i];
+    }
+
+    loss /= BATCH_SIZE; // LOSS OF THE BATCH
 
 
+    cout << endl;
+
+    cudaFree(d_result);
+    cudaFree(d_onehotLabels);
+    cudaFree(d_labels);
+    delete [] h_onehotLabels;
     delete [] h_result;
 
 //    double* test_vec = new double[test_number_of_images*number_of_pixels];
@@ -289,7 +362,7 @@ int main() {
 //    read_Mnist_Label(test_label_filename, test_vec_labels);
 //    cudaMalloc((void**)&d_test_vec, test_number_of_images * number_of_pixels * sizeof(double));
 //    cudaMemcpy(d_test_vec, test_vec, test_number_of_images * number_of_pixels * sizeof(double), cudaMemcpyHostToDevice);
-//    normalizeKernel<<<test_number_of_images, 1>>> (d_test_vec);
+//    divideKernel<<<test_number_of_images, 1>>> (d_test_vec);
 //    cudaMemcpy(test_vec, d_test_vec, test_number_of_images * number_of_pixels * sizeof(double), cudaMemcpyDeviceToHost);
 //    cout << "got here";
 //    cudaFree(d_test_vec);

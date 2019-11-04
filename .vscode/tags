@@ -1,0 +1,26 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+Activation	../mnist_ann.py	/^from keras.layers import Dense, Dropout, Activation, Flatten$/;"	kind:namespace	line:10
+Dense	../mnist_ann.py	/^from keras.layers import Dense, Dropout, Activation, Flatten$/;"	kind:namespace	line:10
+Dropout	../mnist_ann.py	/^from keras.layers import Dense, Dropout, Activation, Flatten$/;"	kind:namespace	line:10
+Flatten	../mnist_ann.py	/^from keras.layers import Dense, Dropout, Activation, Flatten$/;"	kind:namespace	line:10
+IM_SIZE	../mnist_ann.py	/^IM_SIZE = 28*28$/;"	kind:variable	line:13
+Sequential	../mnist_ann.py	/^from keras.models import Sequential$/;"	kind:namespace	line:9
+X_test	../mnist_ann.py	/^X_test = X_test.reshape(X_test.shape[0], IM_SIZE).astype(float)$/;"	kind:variable	line:18
+X_train	../mnist_ann.py	/^X_train = X_train.reshape(X_train.shape[0], IM_SIZE).astype(float)$/;"	kind:variable	line:17
+eval	../mnist_ann.py	/^eval = np.mean(model.evaluate(X_test, y_test, verbose=1))$/;"	kind:variable	line:37
+metrics	../mnist_ann.py	/^                metrics=['accuracy'])$/;"	kind:variable	line:33
+mnist	../mnist_ann.py	/^from keras.datasets import mnist$/;"	kind:namespace	line:8
+mnist_ann.py	../mnist_ann.py	1;"	kind:file	line:1
+model	../mnist_ann.py	/^model = Sequential([Dense(256, input_shape=(IM_SIZE,), activation='relu'), $/;"	kind:variable	line:26
+np	../mnist_ann.py	/^import numpy as np$/;"	kind:namespace	line:3
+np_utils	../mnist_ann.py	/^from keras.utils import np_utils$/;"	kind:namespace	line:11
+optimizer	../mnist_ann.py	/^                optimizer='SGD',$/;"	kind:variable	line:32
+tf	../mnist_ann.py	/^import tensorflow as tf$/;"	kind:namespace	line:5
+warnings	../mnist_ann.py	/^import warnings$/;"	kind:namespace	line:1
+y_test	../mnist_ann.py	/^y_test = np_utils.to_categorical(y_test, 10)$/;"	kind:variable	line:24
+y_train	../mnist_ann.py	/^y_train = np_utils.to_categorical(y_train, 10)$/;"	kind:variable	line:23
